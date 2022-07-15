@@ -1,3 +1,4 @@
+from math import gamma
 from .base_critic import BaseCritic
 import tensorflow as tf
 from cs285.infrastructure.tf_utils import build_mlp
@@ -52,10 +53,10 @@ class BootstrappedContinuousCritic(BaseCritic):
         # TODO: set up the critic loss
         # HINT1: the critic_prediction should regress onto the targets placeholder (sy_target_n)
         # HINT2: use tf.losses.mean_squared_error
-        self.critic_loss = TODO
+        self.critic_loss = tf.losses.mean_squared_error(self.sy_target_n, self.critic_prediction)
 
         # TODO: use the AdamOptimizer to optimize the loss defined above
-        self.critic_update_op = TODO
+        self.critic_update_op = tf.train.AdamOptimizer().minimize(self.critic_loss)
 
     def define_placeholders(self):
         """
@@ -79,7 +80,7 @@ class BootstrappedContinuousCritic(BaseCritic):
     def forward(self, ob):
         # TODO: run your critic
         # HINT: there's a neural network structure defined above with mlp layers, which serves as your 'critic'
-        return TODO
+        return self.sess.run([self.critic_prediction], feed_dict = {self.sy_ob_no: ob})[0]
 
     def update(self, ob_no, next_ob_no, re_n, terminal_n):
         """
@@ -117,6 +118,9 @@ class BootstrappedContinuousCritic(BaseCritic):
                     #a) sy_ob_no with ob_no
                     #b) sy_target_n with target values calculated above
         
-        TODO
+        for i in range(self.num_grad_steps_per_target_update * self.num_target_updates):
+            if i % self.num_grad_steps_per_target_update == 0:
+                targ_val = re_n + self.forward(next_ob_no) * self.gamma * (1-terminal_n)
+            loss, _ = self.sess.run([self.critic_loss, self.critic_update_op], feed_dict = {self.sy_ob_no: ob_no, self.sy_target_n: targ_val})
 
         return loss
